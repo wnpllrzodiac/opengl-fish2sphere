@@ -117,11 +117,6 @@ public class GLRenderer implements GLSurfaceView.Renderer {
 
             u = (float) (0.5f +  phi2 / Math.PI * Math.cos(theta2));
             v = (float) (0.5f - phi2 / Math.PI * Math.sin(theta2));
-            Log.d(TAG, String.format("%f %f", u, v));
-//
-//
-//            u = phi / 360.0f;
-//            v = theta / 180.0f;
         }
 
         public void put(float buffer[], int idx, int stride) {
@@ -206,8 +201,6 @@ public class GLRenderer implements GLSurfaceView.Renderer {
     }
 
     private void setupVertex() {
-        ArrayList<Float> alVertex = new ArrayList<>();
-
         int idx = 0;
         int stride = GEO_COORDS_PER_VERTEX + TEX_COORDS_PER_VERTEX;
         vCount = geo_vrange / geo_angleStep * geo_hrange / geo_angleStep * VERTEX_PER_SQUARE * stride;
