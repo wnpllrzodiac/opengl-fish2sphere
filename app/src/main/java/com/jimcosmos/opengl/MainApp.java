@@ -28,10 +28,8 @@ public class MainApp extends Activity {
     super.onCreate(savedInstanceState);
     this.requestWindowFeature(Window.FEATURE_NO_TITLE);
     this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-    this.mGlSurfaceView = new GLSurfaceView(this);
-    this.mGlSurfaceView.setEGLContextClientVersion(2);
-    this.mGlSurfaceView.setRenderer(new GLRenderer(this, this.mGlSurfaceView));
-    this.mGlSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+
+    this.mGlSurfaceView = new GLView(this);
     this.setContentView(this.mGlSurfaceView);
   }
 

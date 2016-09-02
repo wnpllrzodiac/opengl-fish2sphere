@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import com.jimcosmos.opengl.GLUtils.SphereMath.Point3F;
+
 
 /**
  * Created by guobichuan on 7/20/16.
@@ -42,16 +44,20 @@ public class GLRenderer implements GLSurfaceView.Renderer {
     private int vertexBuffer[] = new int[1];
     private int textureBuffer[] = new int[1];
 
-    private float geo_r = 5.0f;
-    private int geo_angleStep = 10;
-    private int geo_vrange = 180;
-    private int geo_hrange = 360;
+    private float geo_r = 10.0f;
+    private int   geo_angleStep = 10;
+    private int   geo_vrange = 180;
+    private int   geo_hrange = 180;
+
+    private float cam_scale = 1.0f;
+    private Point3F cam_eye = new Point3F(0f, 1.0f, 0f);
+    private Point3F cam_head = new Point3F(0f, 0f, 1.0f);
 
     private int vCount;
 
     private static final int BYTES_PER_FLOAT = 4;
     private static final int GEO_COORDS_PER_VERTEX = 3;
-    private static final int TEX_COORDS_PER_VERTEX = 2; // 每个纹理坐标为 S T两个
+    private static final int TEX_COORDS_PER_VERTEX = 2;
     private static final int VERTEX_PER_SQUARE = 6;
 
     private Bitmap bitmap;
@@ -60,6 +66,38 @@ public class GLRenderer implements GLSurfaceView.Renderer {
     private final float[] mModelMatrix = new float[16];
     private final float[] mViewMatrix = new float[16];
     private final float[] mProjectionMatrix = new float[16];
+
+    public void transByPointF(PointF p) {
+
+        Point3F x_axis = SphereMath.cross(cam_head, cam_eye).normalize();
+        Point3F y_axis = cam_head;
+
+        cam_eye = SphereMath.add(
+                        cam_eye,
+                        SphereMath.add(
+                                SphereMath.mul(x_axis, p.x),
+                                SphereMath.mul(y_axis, p.y)));
+        if (cam_eye.y < 0.1f)
+            cam_eye.y = 0.1f;
+        cam_eye = cam_eye.normalize();
+
+        double theta = Math.acos(cam_eye.z);
+        double phi = Math.acos(cam_eye.x / Math.sin(theta));
+
+        cam_head = new Point3F(
+                (float) (Math.sin(theta - Math.PI / 2) * Math.cos(phi)),
+                (float) (Math.sin(theta - Math.PI / 2) * Math.sin(phi)),
+                (float) (Math.cos(theta - Math.PI / 2))).normalize();
+
+        Log.d(TAG, String.format("%f %f %f %f %f", p.x, p.y, cam_eye.x, cam_eye.y, cam_eye.z));
+
+
+    }
+
+    public void scaleByFloat(float scaleFactor) {
+        cam_scale *= scaleFactor;
+        cam_scale = Math.min(geo_r / 1.1f, Math.max(0.5f, cam_scale));
+    }
 
     private class Vertex {
 
@@ -73,8 +111,17 @@ public class GLRenderer implements GLSurfaceView.Renderer {
             x = (float) (r * Math.sin(Math.toRadians(theta)) * Math.cos(Math.toRadians(phi)));
             y = (float) (r * Math.sin(Math.toRadians(theta)) * Math.sin(Math.toRadians(phi)));
             z = (float) (r * Math.cos(Math.toRadians(theta)));
-            u = phi / 360.0f;
-            v = 1.0f - theta / 180.0f;
+
+            float phi2 = (float) Math.acos(y / r);
+            float theta2 = (float) Math.atan2(z, x);
+
+            u = (float) (0.5f +  phi2 / Math.PI * Math.cos(theta2));
+            v = (float) (0.5f - phi2 / Math.PI * Math.sin(theta2));
+            Log.d(TAG, String.format("%f %f", u, v));
+//
+//
+//            u = phi / 360.0f;
+//            v = theta / 180.0f;
         }
 
         public void put(float buffer[], int idx, int stride) {
@@ -94,7 +141,7 @@ public class GLRenderer implements GLSurfaceView.Renderer {
 
         bitmap = BitmapFactory.decodeResource(
                 context.getResources(),
-                context.getResources().getIdentifier("earth", "drawable", context.getPackageName()), new BitmapFactory.Options());
+                context.getResources().getIdentifier("fish", "drawable", context.getPackageName()), new BitmapFactory.Options());
 
     }
 
@@ -123,9 +170,6 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         this.width = width;
         this.height = height;
 
-        float ratio = (float) width / height;
-        Matrix.frustumM(mProjectionMatrix, 0, -ratio, ratio, -1, 1, 1, 100);
-
     }
 
     @Override
@@ -137,10 +181,14 @@ public class GLRenderer implements GLSurfaceView.Renderer {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
         Matrix.setIdentityM(mModelMatrix, 0);
+
         Matrix.setLookAtM(mViewMatrix, 0,
-                0, 0, 0f,
-                0f, 0f, -10.0f,
-                0f, 1.0f, 0.0f);
+                0, 0, 0,
+                cam_eye.x, cam_eye.y, cam_eye.z,
+                cam_head.x, cam_head.y, cam_head.z);
+
+        float ratio = (float) width / height;
+        Matrix.frustumM(mProjectionMatrix, 0, -ratio, ratio, -1, 1, cam_scale, 25);
 
         Matrix.multiplyMM(mMVPMatrix, 0, mViewMatrix, 0, mModelMatrix, 0);
         Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mMVPMatrix, 0);
